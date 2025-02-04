@@ -29,6 +29,10 @@ struct RecipeCell: View {
             }
             .padding(.leading)
         }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding()
+        .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
+        .padding(.horizontal, 4)
     }
 }
 
