@@ -10,27 +10,25 @@ import SwiftUI
 struct RecipeListView: View {
     
     @StateObject var vm: RecipeListVM
+    @State private var recipes: [Recipes] = []
     
     var body: some View {
         NavigationView {
             ZStack {
                 List {
                     ForEach(vm.recipes, id: \.id) { recipe in
-                        RecipeCell(recipies: recipe)
+                        RecipeCell(recipiess: recipe)
                             .listRowSeparator(.hidden)
                     }
                 }
                 .listStyle(.plain)
                 .navigationTitle("My Recipies")
             }
-            .onAppear(perform: vm.fetchRecipe)
+            .onAppear(perform: vm.getRecipe)
         }
     }
 }
 
-//#Preview {
-//    RecipeListView(vm: vm)
-//}
 struct RecipeListView_Previews: PreviewProvider {
     static var previews: some View {
         RecipeListView(vm: .init())

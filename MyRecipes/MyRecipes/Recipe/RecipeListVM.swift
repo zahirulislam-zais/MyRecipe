@@ -9,33 +9,37 @@ import Foundation
 
 final class RecipeListVM: ObservableObject {
     
-    @Published var recipes: [RecipeListModel.Recipes] = []
+    @Published var recipes: [Recipes] = []
+    @Published private var isLoading = false
+    @Published private var alertItem: AlertItem?
     
-    func fetchRecipe() {
-        let recipeUrlString = "https://dummyjson.com/recipes"
-        if let url = URL(string: recipeUrlString) {
-            
-            URLSession
-                .shared
-                .dataTask(with: url) { [weak self] data, response, error in
+    func getRecipe() {
+        NetworkClient.shared.getRecipes { [self]
+            result in
+            DispatchQueue.main.async {
+                self.isLoading = false
+                
+                switch result {
+                case .success(let recipes):
+                    self.recipes = recipes
                     
-                    if error != nil {
-                        // TODO: handel error
-                        print("Network Error")
-                    } else {
-                        let decoder = JSONDecoder()
+                case .failure(let error):
+                    switch error {
+                    case .invalidData:
+                        self.alertItem = AlertContext.invalidData
                         
-                        if let data = data,
-                           let recipies = try? decoder.decode([RecipeListModel.Recipes].self, from: data) {
-                            // TODO: handel setting the data
-                            self?.recipes = recipies
-                        } else {
-                            // TODO: handel error
-                            print("Network Error!!")
-                        }
+                    case .invalidURL:
+                        self.alertItem = AlertContext.invalidURL
+                        
+                    case .invalidResponse:
+                        self.alertItem = AlertContext.invalidResponse
+                        
+                    case .unableToComplete:
+                        self.alertItem = AlertContext.unableToComplete
                     }
-                    
-                }.resume()
+                }
+            }
+            
         }
     }
 }

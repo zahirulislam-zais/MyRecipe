@@ -6,73 +6,78 @@
 //
 
 import Foundation
+import UIKit
 
-protocol NetworkRequest {
-    func request<T: Decodable>(type:T.Type, config: EndpointConfiguration) async throws -> Result<T, NetworkError>
-}
-
-public enum HttpRequestMethod: String {
-    case get = "GET"
-    case put = "PUT"
-    case post = "POST"
-    case delete = "DELETE"
+class NetworkClient: NSObject {
     
-    var verb: String { rawValue }
-}
-
-enum ContentType: String {
-    case urlEncoded = "application/x-www-form-urlencoded"
-    case json = "application/json; charset=utf-8"
-}
-
-enum NetworkError: Error {
-    case offlineError(message: String, statusCode: Int)
-    case networkError(message: String, statusCode: Int)
-    case invalidURL
-    case mapFailure(message: String)
-    case encodingError(message: String)
-    case decodingError(message: String)
-    case invalidPayload
-    case emptyData
-    case emptyMessage
-    case message(message: String)
-}
-
-protocol EndpointConfiguration {
-    var baseURL: String {get}
-    var path: String {get}
-    var httpMethod: HttpRequestMethod {get}
-    var parameters: [String: Any] {get}
-    func urlRequest() throws -> URLRequest
-}
-
-class NetworkManager: NetworkRequest {
-    static let shared: NetworkManager = NetworkManager()
-
-    private init() {}
+    static let shared           = NetworkClient()
+    private let cache           = NSCache<NSString, UIImage>()
     
-    func request<T: Decodable>(type:T.Type, config: EndpointConfiguration) async throws -> Result<T, NetworkError> {
-        let urlRequest = try config.urlRequest()
-        let (data, response) = try await URLSession.shared.data(for: urlRequest)
-        
-        if let httpResponse = response as? HTTPURLResponse {
-            guard (200..<300).contains(httpResponse.statusCode) else {
-                return .failure(NetworkError.networkError(message: "NetworkError: ", statusCode: httpResponse.statusCode))
+    static let baseURL          = "https://dummyjson.com/"
+    private let appetizerURL    = baseURL + "recipes"
+    
+    private override init() {}
+    
+    func getRecipes(completed: @escaping (Result<[Recipes], APError>) -> Void) {
+        guard let url = URL(string: appetizerURL) else {
+            completed(.failure(.invalidURL))
+            return
+        }
+               
+        let task = URLSession.shared.dataTask(with: URLRequest(url: url)) { data, response, error in
+            
+            if let _ =  error {
+                completed(.failure(.unableToComplete))
+                return
+            }
+                        
+            guard let response = response as? HTTPURLResponse, response.statusCode == 200 else {
+                completed(.failure(.invalidResponse))
+                return
+            }
+            
+            guard let data = data else {
+                completed(.failure(.invalidData))
+                return
+            }
+            
+            do {
+                let decoder = JSONDecoder()
+                let decodedResponse = try decoder.decode(RecipeResponse.self, from: data)
+                completed(.success(decodedResponse.recipes))
+            } catch {
+                completed(.failure(.invalidData))
             }
         }
-
-        guard !data.isEmpty else {
-            return .failure(NetworkError.emptyData)
-        }
-
-        do {
-            let decodedResponse = try JSONDecoder().decode(T.self, from: data)
-            return .success(decodedResponse)
-        }
-        catch {
-            return .failure(NetworkError.decodingError(message: error.localizedDescription))
-        }
+        
+        task.resume()
     }
     
+    func downloadImage(from urlString: String, completed: @escaping (UIImage?) -> Void) {
+        
+        let cacheKey = NSString(string: urlString)
+        
+        if let image = cache.object(forKey: cacheKey) {
+            completed(image)
+            return
+        }
+        
+        guard let url = URL(string: urlString) else {
+            completed(nil)
+            return
+        }
+        
+        let task = URLSession.shared.dataTask(with: url) { data, response, error in
+            guard let data = data, let image = UIImage(data: data) else {
+                completed(nil)
+                return
+            }
+            
+            self.cache.setObject(image, forKey: cacheKey)
+            completed(image)
+        }
+        
+        task.resume()
+    }
 }
 

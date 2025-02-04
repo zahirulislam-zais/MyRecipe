@@ -8,25 +8,32 @@
 import SwiftUI
 
 struct RecipeCell: View {
-    let recipies: RecipeListModel.Recipes
     
-        
+    let recipiess: Recipes
+    
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("**Name**: \(recipies.name)")
-            Divider()
-            Text("**Rating**: \(recipies.rating)")
-            Text("**Reviews**: \(recipies.reviewCount)")
+        HStack {
+            RecipeImage(urlString: recipiess.image)
+                .aspectRatio(contentMode: .fit)
+                .frame(width: 120, height: 90)
+                .cornerRadius(8)
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text(recipiess.name)
+                    .font(.title2)
+                    .fontWeight(.medium)
+                
+                Text("Rating \(recipiess.rating, specifier: "%.2f")")
+                    .foregroundColor(.secondary)
+                    .fontWeight(.semibold)
+            }
+            .padding(.leading)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding()
-        .background(Color.gray.opacity(0.1), in: RoundedRectangle(cornerRadius: 10, style: .continuous))
-        .padding(.horizontal, 4)
     }
 }
 
 struct RecipeCell_Previews: PreviewProvider {
     static var previews: some View {
-        RecipeCell(recipies: .init(id: 0, name: "Classic Margherita Pizza", ingredients: ["Instruction text goes here"], instructions: ["Instruction text goes here"], prepTimeMinutes: 20, cookTimeMinutes: 10, servings: 4, difficulty: "Easy", cuisine: "Italian", caloriesPerServing: 300, image: "https://cdn.dummyjson.com/recipe-images/1.webp", rating: 4.6, reviewCount: 98, mealType: ["Dinner"]))
+        RecipeCell(recipiess: MockData.sampleRecipe)
     }
 }
